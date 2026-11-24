@@ -11,62 +11,13 @@
 <div class="container">
     <div class="page-layout">
 
-        <aside class="sidebar">
-            <div class="logo-box">
-                <div class="logo-badge"></div>
-                <div>
-                    <p class="logo-title">AdFlow</p>
-                    <p class="logo-sub">Реклама малого бизнеса</p>
-                </div>
-            </div>
-
-            <nav class="nav-list">
-                <a href="/" class="nav-link active">Главная</a>
-                <a href="/campaigns" class="nav-link">Кампании</a>
-                <a href="/tasks" class="nav-link">Задачи</a>
-                <a href="/finance" class="nav-link">Финансы</a>
-                <a href="/reports" class="nav-link">Отчёты</a>
-                <a href="/leads" class="nav-link">Пользователи и API</a>
-            </nav>
-
-            <div class="role-pill-row">
-                <p class="sidebar-limit-title" style="width: 100%; padding: 0 2px;">РОЛЬ ДОСТУПА (ТЗ)</p>
-                @foreach($roleLabels as $roleKey => $roleTitle)
-                    <a href="/?role={{ $roleKey }}{{ $search ? '&search=' . urlencode($search) : '' }}"
-                       class="role-chip {{ $selectedRole === $roleKey ? 'is-active' : '' }}">
-                        {{ $roleTitle }}
-                    </a>
-                @endforeach
-            </div>
-
-            <div class="sidebar-limit">
-                <p class="sidebar-limit-title">Лимит бюджета</p>
-                <p class="sidebar-limit-num">{{ $budgetLeftPercent }}%</p>
-                <div class="progress-track">
-                    <div class="progress-fill" style="width: {{ $budgetUsedPercent }}%;"></div>
-                </div>
-                <p class="sidebar-limit-note">Осталось до конца месяца</p>
-            </div>
-
-            <div class="user-card">
-                <div class="user-avatar">{{ $displayUserInitials }}</div>
-                <div>
-                    <p class="user-name">{{ $displayUserName }}</p>
-                    <p class="user-role">{{ $displayUserRole }}</p>
-                </div>
-                <form method="POST" action="/logout" style="margin-left: auto;">
-                    @csrf
-                    <button type="submit" class="btn-outline" style="padding: 6px 10px;" title="Выйти">→</button>
-                </form>
-            </div>
-        </aside>
+        @include('partials.sidebar', ['active' => 'home'])
 
         <main class="content">
             <header class="topbar">
                 <p class="section-label">ГЛАВНАЯ</p>
                 <div class="topbar-controls">
                     <form method="GET" action="/" style="display: flex; gap: 8px; align-items: center;">
-                        <input type="hidden" name="role" value="{{ $selectedRole }}">
                         <input type="search"
                                name="search"
                                value="{{ $search }}"
@@ -94,7 +45,7 @@
             <section class="hero-bento">
                 <div class="hero-roi-card">
                     <div>
-                        <span class="pill-tag">ROI · ноябрь</span>
+                        <span class="pill-tag">ROI · все кампании</span>
                         <p class="hero-roi-num">{{ $roi }}%</p>
                         <p class="page-desc">окупаемость рекламных кампаний<br>за месяц</p>
                     </div>
@@ -109,7 +60,7 @@
                     </div>
 
                     <div class="card">
-                        <span class="pill-tag">Бюджет месяца</span>
+                        <span class="pill-tag">Общий бюджет</span>
                         <p class="kpi-num" style="margin: 10px 0 8px;">{{ $budgetUsedPercent }}%</p>
                         <div class="progress-track">
                             <div class="progress-fill" style="width: {{ $budgetUsedPercent }}%;"></div>
@@ -123,13 +74,13 @@
                 <div class="stat-box">
                     <p class="stat-box-title">Новые заявки</p>
                     <p class="stat-box-num">{{ $newLeadsCount }}</p>
-                    <span class="mini-pill">+12 за неделю</span>
+                    <span class="mini-pill">+{{ $newLeadsWeek }} за неделю</span>
                 </div>
 
                 <div class="stat-box">
-                    <p class="stat-box-title">Задач на сегодня</p>
+                    <p class="stat-box-title">Открытых задач</p>
                     <p class="stat-box-num">{{ $openTasksCount }}</p>
-                    <span class="mini-pill">3 горят</span>
+                    <span class="mini-pill">{{ $urgentTasksCount }} горят</span>
                 </div>
 
                 <div class="stat-box">
@@ -149,7 +100,7 @@
                 <div class="card">
                     <div class="card-head">
                         <h2 class="card-title">Расход по кампаниям</h2>
-                        <span class="camp-date">₽, ноябрь</span>
+                        <span class="camp-date">₽</span>
                     </div>
 
                     @php $maxSpent = max(1, (float) $campaigns->max('budget_spent')); @endphp
@@ -172,17 +123,12 @@
                 <div class="alerts-dark-card">
                     <h2 class="card-title">Уведомления</h2>
 
-                    <span class="dark-alert-badge">Лимит</span>
-                    <p class="dark-alert-text">«Весенняя распродажа» израсходовала 90% бюджета</p>
-
-                    <span class="dark-alert-badge">Срок</span>
-                    <p class="dark-alert-text">Задача «Баннеры для ВК» — до 18:00 сегодня</p>
-
-                    <span class="dark-alert-badge">Синхр.</span>
-                    <p class="dark-alert-text" style="margin-bottom: 0;">
-                        Яндекс.Директ обновлён 5 минут назад
-                        <span class="dark-alert-sub" style="display: block;">Дублируются в Telegram</span>
-                    </p>
+                    @forelse($alerts as $alert)
+                        <span class="dark-alert-badge">{{ $alert['type'] }}</span>
+                        <p class="dark-alert-text">{{ $alert['text'] }}</p>
+                    @empty
+                        <p class="dark-alert-text" style="margin-bottom: 0;">Лимиты и сроки в порядке, уведомлений нет.</p>
+                    @endforelse
                 </div>
             </section>
 
@@ -193,7 +139,7 @@
                         <a href="/tasks" class="camp-date">Главная → Мои задачи → Детали</a>
                     </div>
 
-                    @foreach($tasks as $task)
+                    @forelse($tasks as $task)
                         <div class="my-task-item">
                             <div class="my-task-left">
                                 <span class="task-dot {{ !empty($task->is_done) ? 'is-done' : '' }}"></span>
@@ -204,7 +150,9 @@
                                 <span class="mini-pill">{{ $task->due_label }}</span>
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <p class="page-desc">Открытых задач нет.</p>
+                    @endforelse
                 </div>
 
                 <div class="card">
@@ -214,17 +162,17 @@
 
                     <div class="integration-box">
                         <p class="camp-title">● Яндекс.Директ API</p>
-                        <p class="camp-date">Подключено · REST / JSON</p>
+                        <p class="camp-date">Планируется · REST / JSON</p>
                     </div>
 
                     <div class="integration-box">
                         <p class="camp-title">● ВКонтакте API</p>
-                        <p class="camp-date">Подключено · REST / JSON</p>
+                        <p class="camp-date">Планируется · REST / JSON</p>
                     </div>
 
                     <div class="integration-box">
                         <p class="camp-title">● Telegram-уведомления</p>
-                        <p class="camp-date">Сроки задач и лимиты бюджета</p>
+                        <p class="camp-date">Планируется · сроки задач и лимиты бюджета</p>
                     </div>
                 </div>
             </section>

@@ -4,143 +4,123 @@ namespace App\Http\Controllers;
 
 use App\Models\Campaign;
 use App\Models\CampaignTask;
-use Carbon\Carbon;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class SectionController extends Controller
 {
+    // Общие данные для страниц «Финансы» и «Отчёты»
     private function baseData(): array
     {
         $campaigns = Campaign::orderByDesc('id')->get();
-
-        foreach ($campaigns as $campaign) {
-            $campaign->spent_percent = $campaign->budget_total > 0
-                ? round(($campaign->budget_spent / $campaign->budget_total) * 100)
-                : 0;
-
-            $campaign->remaining_budget = max(0, $campaign->budget_total - $campaign->budget_spent);
-            $campaign->profit = $campaign->revenue_attributed - $campaign->budget_spent;
-            $campaign->roi = $campaign->budget_spent > 0
-                ? round((($campaign->revenue_attributed - $campaign->budget_spent) / $campaign->budget_spent) * 100)
-                : 0;
-        }
-
-        $totalBudget = $campaigns->sum('budget_total');
-        $totalSpent = $campaigns->sum('budget_spent');
-        $totalRevenue = $campaigns->sum('revenue_attributed');
-        $totalRemaining = max(0, $totalBudget - $totalSpent);
-        $totalProfit = $totalRevenue - $totalSpent;
-
-        $overallRoi = $totalSpent > 0
-            ? round((($totalRevenue - $totalSpent) / $totalSpent) * 100)
-            : 0;
-
-        $usedPercent = $totalBudget > 0
-            ? min(100, max(0, round(($totalSpent / $totalBudget) * 100)))
-            : 0;
-        $leftPercent = max(0, 100 - $usedPercent);
+        $totals = Campaign::totals();
 
         $budgetAlerts = [];
         foreach ($campaigns as $campaign) {
-            if ($campaign->spent_percent >= 85) {
-                $budgetAlerts[] = "Лимит бюджета кампании «{$campaign->name}» освоен на {$campaign->spent_percent}% (остаток " . number_format($campaign->remaining_budget, 0, ',', ' ') . " ₽).";
+            $message = $campaign->limitMessage();
+            if ($message) {
+                $budgetAlerts[] = $message;
             }
         }
 
         return [
             'campaigns' => $campaigns,
-            'totalBudget' => $totalBudget,
-            'totalSpent' => $totalSpent,
-            'totalRevenue' => $totalRevenue,
-            'totalRemaining' => $totalRemaining,
-            'totalProfit' => $totalProfit,
-            'overallRoi' => $overallRoi,
-            'budgetUsedPercent' => $usedPercent,
-            'budgetLeftPercent' => $leftPercent,
+            'totalBudget' => $totals['budget'],
+            'totalSpent' => $totals['spent'],
+            'totalRevenue' => $totals['revenue'],
+            'totalRemaining' => $totals['remaining'],
+            'totalProfit' => $totals['profit'],
+            'overallRoi' => $totals['roi'],
+            'budgetUsedPercent' => $totals['used_percent'],
+            'budgetLeftPercent' => $totals['left_percent'],
             'budgetAlerts' => $budgetAlerts,
         ];
     }
 
     public function tasks(Request $request)
     {
-        $filter = $request->get('filter', 'all');
+        $user = auth()->user();
         $roleFilter = $request->get('role', 'all');
-        $data = $this->baseData();
+        $viewMode = $request->get('view', 'list');
+        $search = trim((string) $request->get('search', ''));
 
-        $query = CampaignTask::with('campaign')
+        $query = CampaignTask::visibleTo($user)
+            ->with(['campaign', 'user'])
             ->orderBy('is_done')
             ->orderByRaw('due_date IS NULL')
             ->orderBy('due_date')
             ->orderByDesc('id');
 
-        if ($filter === 'open') {
-            $query->where('is_done', false);
-        } elseif ($filter === 'done') {
-            $query->where('is_done', true);
-        }
-
-        if (in_array($roleFilter, ['manager', 'executor'], true)) {
+        if (in_array($roleFilter, ['manager', 'designer', 'copywriter'], true)) {
             $query->where('assignee_role', $roleFilter);
         }
 
-        $tasks = $query->get();
-        $today = Carbon::today();
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%' . $search . '%')
+                  ->orWhereHas('campaign', function ($c) use ($search) {
+                      $c->where('name', 'like', '%' . $search . '%');
+                  });
+            });
+        }
 
+        $tasks = $query->get();
+
+        // уведомления о сроках
         $deadlineAlerts = [];
         foreach ($tasks as $task) {
-            if (!$task->is_done && $task->due_date) {
-                $due = Carbon::parse($task->due_date)->startOfDay();
-                $diffDays = $today->diffInDays($due, false);
-                if ($diffDays < 0) {
-                    $deadlineAlerts[] = "Просрочена задача «{$task->title}» (срок был " . $due->format('d.m.Y') . ").";
-                } elseif ($diffDays <= 3) {
-                    $deadlineAlerts[] = "Приближается срок задачи «{$task->title}» (" . $due->format('d.m.Y') . ").";
-                }
+            $message = $task->deadlineMessage();
+            if ($message) {
+                $deadlineAlerts[] = $message;
             }
         }
 
-        $data['tasks'] = $tasks;
-        $data['filter'] = $filter;
-        $data['roleFilter'] = $roleFilter;
-        $data['openCount'] = CampaignTask::where('is_done', false)->count();
-        $data['doneCount'] = CampaignTask::where('is_done', true)->count();
-        $data['deadlineAlerts'] = $deadlineAlerts;
+        // ставить задачи могут только админ и менеджер
+        $canManageTasks = in_array($user->role, ['admin', 'manager'], true);
 
-        return view('sections.tasks', $data);
+        return view('sections.tasks', [
+            'tasks' => $tasks,
+            'roleFilter' => $roleFilter,
+            'viewMode' => $viewMode,
+            'searchQuery' => $search,
+            'deadlineAlerts' => $deadlineAlerts,
+            'canManageTasks' => $canManageTasks,
+            'campaigns' => $canManageTasks ? Campaign::orderByDesc('id')->get() : collect(),
+            'executors' => $canManageTasks ? User::where('role', 'executor')->orderBy('name')->get() : collect(),
+        ]);
     }
 
     public function storeTask(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'campaign_id' => 'required|exists:campaigns,id',
+            'user_id' => 'nullable|exists:users,id',
             'title' => 'required|string|max:200',
-            'assignee_role' => 'required|in:manager,executor',
+            'assignee_role' => 'required|in:manager,designer,copywriter',
             'due_date' => 'nullable|date',
         ]);
 
-        CampaignTask::create([
-            'campaign_id' => $request->campaign_id,
-            'title' => $request->title,
-            'assignee_role' => $request->assignee_role,
-            'due_date' => $request->due_date,
-            'is_done' => false,
-        ]);
+        CampaignTask::create($data + ['is_done' => false]);
 
         return redirect('/tasks')->with('success', 'Задача назначена');
     }
 
-    public function toggleTask($id)
+    public function toggleTask(CampaignTask $task)
     {
-        $task = CampaignTask::findOrFail($id);
+        // исполнитель может отмечать только те задачи, которые ему видны
+        $allowed = CampaignTask::visibleTo(auth()->user())->where('id', $task->id)->exists();
+        if (!$allowed) {
+            abort(403);
+        }
+
         $task->is_done = !$task->is_done;
         $task->save();
 
-        return redirect('/tasks')->with('success', 'Статус задачи обновлён');
+        return back()->with('success', 'Статус задачи обновлён');
     }
 
-    public function destroyTask($id)
+    public function destroyTask(CampaignTask $task)
     {
-        $task = CampaignTask::findOrFail($id);
         $task->delete();
 
         return redirect('/tasks')->with('success', 'Задача удалена');
@@ -148,24 +128,18 @@ class SectionController extends Controller
 
     public function finance()
     {
-        $data = $this->baseData();
-
-        return view('sections.finance', $data);
+        return view('sections.finance', $this->baseData());
     }
 
-    public function updateFinance(Request $request, $id)
+    public function updateFinance(Request $request, Campaign $campaign)
     {
-        $request->validate([
+        $data = $request->validate([
             'budget_total' => 'required|numeric|min:1',
             'budget_spent' => 'required|numeric|min:0',
             'revenue_attributed' => 'required|numeric|min:0',
         ]);
 
-        $campaign = Campaign::findOrFail($id);
-        $campaign->budget_total = $request->budget_total;
-        $campaign->budget_spent = $request->budget_spent;
-        $campaign->revenue_attributed = $request->revenue_attributed;
-        $campaign->save();
+        $campaign->update($data);
 
         return redirect('/finance')->with('success', 'Бюджет и показатели кампании обновлены');
     }
@@ -180,17 +154,16 @@ class SectionController extends Controller
         $totalTasksCount = $allTasks->count();
         $completedTasksCount = $completedTasks->count();
 
+        // KPI = доля выполненных задач
         $taskKpiPercent = $totalTasksCount > 0
-            ? round(($completedTasksCount / $totalTasksCount) * 100)
+            ? round($completedTasksCount / $totalTasksCount * 100)
             : 0;
 
+        // сводка по площадкам
         $byPlatform = $campaigns->groupBy('platform_name')->map(function ($items, $platform) use ($data) {
             $budget = $items->sum('budget_total');
             $spent = $items->sum('budget_spent');
             $revenue = $items->sum('revenue_attributed');
-            $profit = $revenue - $spent;
-            $roi = $spent > 0 ? round((($revenue - $spent) / $spent) * 100) : 0;
-            $budgetShare = $data['totalBudget'] > 0 ? round(($budget / $data['totalBudget']) * 100) : 0;
 
             return [
                 'platform_name' => $platform,
@@ -198,20 +171,18 @@ class SectionController extends Controller
                 'budget' => $budget,
                 'spent' => $spent,
                 'revenue' => $revenue,
-                'profit' => $profit,
-                'roi' => $roi,
-                'budget_share' => $budgetShare,
+                'profit' => $revenue - $spent,
+                'roi' => $spent > 0 ? round(($revenue - $spent) / $spent * 100) : 0,
+                'budget_share' => $data['totalBudget'] > 0 ? round($budget / $data['totalBudget'] * 100) : 0,
             ];
         })->values();
-
-        $topCampaign = $campaigns->sortByDesc('roi')->first();
 
         $data['byPlatform'] = $byPlatform;
         $data['completedTasks'] = $completedTasks;
         $data['totalTasksCount'] = $totalTasksCount;
         $data['completedTasksCount'] = $completedTasksCount;
         $data['taskKpiPercent'] = $taskKpiPercent;
-        $data['topCampaign'] = $topCampaign;
+        $data['topCampaign'] = $campaigns->sortByDesc('roi')->first();
 
         return view('sections.reports', $data);
     }

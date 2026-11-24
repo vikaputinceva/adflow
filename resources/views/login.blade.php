@@ -35,6 +35,10 @@
                 <p class="page-desc">Учётные записи создаёт администратор — войдите под своей учётной записью.</p>
             </div>
 
+            @if(session('success'))
+                <div class="card" style="padding: 12px 16px; font-weight: 600;">{{ session('success') }}</div>
+            @endif
+
             @if($errors->any())
                 <div class="error-box">{{ $errors->first() }}</div>
             @endif
@@ -42,12 +46,13 @@
             <form method="POST" action="{{ route('login.post') }}" class="login-form">
                 @csrf
                 <label class="field-label">Email
-                    <input type="email" name="email" value="{{ old('email', 'admin@adflow.ru') }}" required class="field-input">
+                    <input type="email" name="email" value="{{ old('email') }}" required class="field-input">
                 </label>
                 <label class="field-label">Пароль
-                    <input type="password" name="password" value="admin123" required class="field-input">
+                    <input type="password" name="password" required class="field-input">
                 </label>
                 <button type="submit" class="btn-dark btn-full">Войти</button>
+                <a href="/forgot-password" class="page-desc" style="text-align: center;">Забыли пароль?</a>
             </form>
 
             <div class="roles-box">
@@ -55,6 +60,7 @@
                 <div class="filter-pills">
                     <span class="role-tag">Администратор</span>
                     <span class="role-tag">Менеджер</span>
+                    <span class="role-tag">Исполнитель</span>
                 </div>
             </div>
         </section>

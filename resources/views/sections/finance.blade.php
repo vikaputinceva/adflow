@@ -10,41 +10,7 @@
 <body>
 <div class="container">
     <div class="page-layout">
-        <aside class="sidebar">
-            <div class="logo-box">
-                <div class="logo-badge"></div>
-                <div>
-                    <p class="logo-title">AdFlow</p>
-                    <p class="logo-sub">Реклама малого бизнеса</p>
-                </div>
-            </div>
-            <nav class="nav-list">
-                <a href="/campaigns" class="nav-link" title="Реестр кампаний">Кампании</a>
-                <a href="/tasks" class="nav-link" title="Задачи и сроки">Задачи</a>
-                <a href="/finance" class="nav-link active" title="Бюджеты и лимиты">Финансы</a>
-                <a href="/reports" class="nav-link" title="Отчёты, KPI и ROI">Отчёты</a>
-                <a href="/login" class="nav-link" title="Вход">Вход</a>
-            </nav>
-            <div class="sidebar-limit">
-                <p class="sidebar-limit-title">Лимит бюджета</p>
-                <p class="sidebar-limit-num">{{ $budgetLeftPercent ?? 0 }}%</p>
-                <div class="progress-track">
-                    <div class="progress-fill" style="width: {{ $budgetUsedPercent ?? 0 }}%;"></div>
-                </div>
-                <p class="sidebar-limit-note">Освоено {{ $budgetUsedPercent ?? 0 }}% общего бюджета</p>
-            </div>
-            <div class="user-card">
-                <div class="user-avatar">АК</div>
-                <div>
-                    <p class="user-name">{{ auth()->user()->name ?? 'Анна К.' }}</p>
-                    <p class="user-role">{{ auth()->user()->role ?? 'Менеджер' }}</p>
-                </div>
-            </div>
-            <form method="POST" action="/logout" style="padding: 0 8px;">
-                @csrf
-                <button type="submit" class="btn-outline" style="width: 100%;">Выйти</button>
-            </form>
-        </aside>
+        @include('partials.sidebar', ['active' => 'finance'])
 
         <main class="content">
             <header class="topbar">
