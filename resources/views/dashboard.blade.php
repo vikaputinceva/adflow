@@ -41,7 +41,9 @@
                     {{ session('success') }}
                 </div>
             @endif
-
+            @if($errors->has('access'))
+                <div class="error-box">{{ $errors->first('access') }}</div>
+            @endif
             <section class="hero-bento">
                 <div class="hero-roi-card">
                     <div>

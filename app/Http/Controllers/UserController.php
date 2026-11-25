@@ -24,7 +24,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:30',
             'role' => 'required|in:admin,manager,executor',
-            'password' => 'required|string|min:6',
+            'password' => ['required', 'string', 'min:6', 'max:8', 'regex:/^(?=.*[A-Za-zА-Яа-яЁё])(?=.*\d).+$/'],
         ], [], [
             'name' => 'ФИО',
         ]);

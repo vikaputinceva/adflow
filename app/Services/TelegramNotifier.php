@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace App\Services;
+
 final class TelegramNotifier
 {
     public function __construct(
@@ -29,6 +31,8 @@ final class TelegramNotifier
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS => $payload,
             CURLOPT_TIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
         ]);
 
         $response = curl_exec($ch);

@@ -7,13 +7,12 @@ use Illuminate\Http\Request;
 
 class CheckRole
 {
-    // Пускаем только пользователей с нужной ролью, например role:admin,manager
     public function handle(Request $request, Closure $next, string ...$roles)
     {
         $user = $request->user();
 
         if (!$user || !in_array($user->role, $roles, true)) {
-            abort(403, 'Нет доступа');
+            return redirect('/')->withErrors(['access' => 'Нет прав для доступа к этому разделу.']);
         }
 
         return $next($request);
