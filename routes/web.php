@@ -5,6 +5,7 @@ use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/campaigns/{campaign}/status', [CampaignController::class, 'updateStatus']);
         Route::patch('/campaigns/{campaign}/metrics', [CampaignController::class, 'updateMetrics']);
         Route::post('/campaigns/{campaign}/materials', [CampaignController::class, 'storeMaterial']);
+        Route::delete('/materials/{material}', [CampaignController::class, 'destroyMaterial']);
 
         Route::post('/tasks', [SectionController::class, 'storeTask']);
         Route::delete('/tasks/{task}', [SectionController::class, 'destroyTask']);
@@ -59,5 +61,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
         Route::post('/users', [UserController::class, 'store']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
+
+        Route::get('/platforms', [PlatformController::class, 'index']);
+        Route::post('/platforms', [PlatformController::class, 'store']);
+        Route::delete('/platforms/{platform}', [PlatformController::class, 'destroy']);
     });
 });

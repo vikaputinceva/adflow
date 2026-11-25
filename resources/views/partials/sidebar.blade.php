@@ -26,6 +26,7 @@
         @endif
 
         @if($currentUser->role === 'admin')
+            <a href="/platforms" class="nav-link {{ $active === 'platforms' ? 'active' : '' }}" title="Справочник площадок">Площадки</a>
             <a href="/users" class="nav-link {{ $active === 'users' ? 'active' : '' }}" title="Создание пользователей">Пользователи</a>
         @endif
     </nav>

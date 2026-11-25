@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Campaign;
 use App\Models\CampaignMaterial;
+use App\Models\Platform;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CampaignController extends Controller
 {
@@ -39,6 +41,7 @@ class CampaignController extends Controller
 
         return view('campaigns.index', [
             'campaigns' => $campaigns,
+            'platforms' => Platform::orderBy('name')->get(),
             'selectedCampaign' => $selectedCampaign,
             'materials' => $materials,
             'currentStatus' => $status,
@@ -52,7 +55,7 @@ class CampaignController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:200',
-            'platform_name' => 'required|string|max:100',
+            'platform_name' => 'required|exists:platforms,name',
             'budget_total' => 'required|numeric|min:1',
             'end_date' => 'required|date',
         ]);
@@ -94,15 +97,49 @@ class CampaignController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:120',
             'format_label' => 'required|string|max:60',
+            'file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,mp4|max:5120',
         ]);
 
-        CampaignMaterial::create($data + ['campaign_id' => $campaign->id]);
+        $material = new CampaignMaterial([
+            'title' => $data['title'],
+            'format_label' => $data['format_label'],
+        ]);
+        $material->campaign_id = $campaign->id;
+
+        // файл не обязателен: можно прикрепить только название и формат
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $material->file_path = $file->store('materials', 'public');
+            $material->file_name = $file->getClientOriginalName();
+        }
+
+        $material->save();
 
         return redirect('/campaigns?selected=' . $campaign->id)->with('success', 'Материал прикреплён');
     }
 
+    public function destroyMaterial(CampaignMaterial $material)
+    {
+        $campaignId = $material->campaign_id;
+
+        if ($material->file_path) {
+            Storage::disk('public')->delete($material->file_path);
+        }
+
+        $material->delete();
+
+        return redirect('/campaigns?selected=' . $campaignId)->with('success', 'Материал удалён');
+    }
+
     public function destroy(Campaign $campaign)
     {
+        // файлы материалов лежат на диске, строки в базе удалятся сами
+        foreach ($campaign->materials as $material) {
+            if ($material->file_path) {
+                Storage::disk('public')->delete($material->file_path);
+            }
+        }
+
         $campaign->delete();
 
         return redirect('/campaigns')->with('success', 'Кампания удалена');

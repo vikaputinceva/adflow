@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Campaign;
 use App\Models\CampaignTask;
 use App\Models\LeadRequest;
+use App\Models\Platform;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -61,6 +62,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'search' => $search,
             'campaigns' => $campaigns,
+            'platforms' => Platform::orderBy('name')->get(),
             'totalCampaignsCount' => Campaign::count(),
             'activeCampaignsCount' => Campaign::where('status', 'active')->count(),
             'totalBudget' => $totals['budget'],

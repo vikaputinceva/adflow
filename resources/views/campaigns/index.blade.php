@@ -169,10 +169,11 @@
                                 <h2 class="card-title">Материалы</h2>
                             </div>
 
-                            <form method="POST" action="/campaigns/{{ $selectedCampaign->id }}/materials" class="create-form" style="margin-bottom: 14px;">
+                            <form method="POST" action="/campaigns/{{ $selectedCampaign->id }}/materials" class="create-form" style="margin-bottom: 14px;" enctype="multipart/form-data">
                                 @csrf
                                 <input type="text" name="title" placeholder="Название материала (например, Баннер ВК)" required class="field-input">
                                 <input type="text" name="format_label" placeholder="Формат (например, 1080×1080)" required class="field-input">
+                                <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,.mp4" class="field-input" title="Файл до 5 МБ: jpg, png, pdf, mp4">
                                 <button type="submit" class="btn-outline">Прикрепить</button>
                             </form>
 
@@ -181,16 +182,17 @@
                                     <div>
                                         <div class="material-box accent">{{ $material->format_label }}</div>
                                         <p class="material-label">{{ $material->title }}</p>
+                                        @if($material->file_url)
+                                            <a href="{{ $material->file_url }}" target="_blank" class="material-label">{{ $material->file_name }}</a>
+                                        @endif
+                                        <form method="POST" action="/materials/{{ $material->id }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn-outline" style="padding: 2px 8px;" title="Удалить материал">×</button>
+                                        </form>
                                     </div>
                                 @empty
-                                    <div>
-                                        <div class="material-box accent">1200×628</div>
-                                        <p class="material-label">Баннер 1</p>
-                                    </div>
-                                    <div>
-                                        <div class="material-box">Объявление</div>
-                                        <p class="material-label">Текст объявления</p>
-                                    </div>
+                                    <p class="page-desc">Материалов пока нет.</p>
                                 @endforelse
                             </div>
                         </div>
@@ -216,9 +218,9 @@
             </label>
             <label class="field-label">Площадка
                 <select name="platform_name" class="field-input">
-                    <option value="Яндекс.Директ" {{ old('platform_name') == 'Яндекс.Директ' ? 'selected' : '' }}>Яндекс.Директ</option>
-                    <option value="ВКонтакте" {{ old('platform_name') == 'ВКонтакте' ? 'selected' : '' }}>ВКонтакте</option>
-                    <option value="Telegram" {{ old('platform_name') == 'Telegram' ? 'selected' : '' }}>Telegram</option>
+                    @foreach($platforms as $platform)
+                        <option value="{{ $platform->name }}" {{ old('platform_name') === $platform->name ? 'selected' : '' }}>{{ $platform->name }}</option>
+                    @endforeach
                 </select>
             </label>
             <label class="field-label">Бюджет (₽)

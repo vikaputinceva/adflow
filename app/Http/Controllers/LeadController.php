@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Campaign;
 use App\Models\LeadRequest;
+use App\Models\Platform;
 use Illuminate\Http\Request;
 
 class LeadController extends Controller
@@ -28,6 +29,7 @@ class LeadController extends Controller
 
         return view('leads.index', [
             'leads' => $query->get(),
+            'platforms' => Platform::orderBy('name')->get(),
             'currentStatus' => $status,
             'search' => $search,
             'statuses' => LeadRequest::STATUSES,
@@ -39,7 +41,7 @@ class LeadController extends Controller
         $data = $request->validate([
             'client_name' => 'required|string|max:150',
             'contact' => 'required|string|max:150',
-            'platform_name' => 'required|string|max:100',
+            'platform_name' => 'required|exists:platforms,name',
             'budget_estimate' => 'required|numeric|min:0',
         ]);
 

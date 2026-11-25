@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Campaign;
 use App\Models\CampaignTask;
 use App\Models\LeadRequest;
+use App\Models\Platform;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -12,6 +13,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        foreach (['Яндекс.Директ', 'ВКонтакте', 'Telegram'] as $name) {
+            Platform::firstOrCreate(['name' => $name]);
+        }
+
         // Тестовые пользователи (после проверки пароли лучше сменить)
         User::updateOrCreate(['email' => 'admin@adflow.ru'], [
             'name' => 'Администратор',

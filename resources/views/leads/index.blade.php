@@ -65,9 +65,9 @@
                     </label>
                     <label class="field-label">Площадка
                         <select name="platform_name" class="field-input">
-                            <option value="Яндекс.Директ">Яндекс.Директ</option>
-                            <option value="ВКонтакте">ВКонтакте</option>
-                            <option value="Telegram">Telegram</option>
+                            @foreach($platforms as $platform)
+                                <option value="{{ $platform->name }}" {{ old('platform_name') === $platform->name ? 'selected' : '' }}>{{ $platform->name }}</option>
+                            @endforeach
                         </select>
                     </label>
                     <label class="field-label">Бюджет (₽)

@@ -24,7 +24,7 @@
                                placeholder="Поиск по заявкам и кампаниям"
                                class="search-input">
                     </form>
-                    <a href="/tasks" class="btn-outline" style="padding: 9px 12px;" title="Уведомления и задачи">🔔</a>
+                    <a href="/tasks" class="btn-outline" title="Уведомления и задачи">Уведомления</a>
                     <button type="button" id="openLeadModal" class="btn-dark">+ Новая заявка</button>
                 </div>
             </header>
@@ -197,9 +197,9 @@
             </label>
             <label class="field-label">Площадка
                 <select name="platform_name" class="field-input">
-                    <option value="Яндекс.Директ">Яндекс.Директ</option>
-                    <option value="ВКонтакте">ВКонтакте</option>
-                    <option value="Telegram">Telegram</option>
+                    @foreach($platforms as $platform)
+                        <option value="{{ $platform->name }}">{{ $platform->name }}</option>
+                    @endforeach
                 </select>
             </label>
             <label class="field-label">Плановый бюджет (₽)
